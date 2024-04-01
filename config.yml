@@ -1,0 +1,10 @@
+server:
+  name: localhost
+  address: :9009
+database:
+  type: mysql
+  username: root
+  password: 
+  host: '127.0.0.1'
+  port: 3306
+  name: bitespeed
