@@ -24,9 +24,9 @@ func newApp(cfg *config.StartupConfig, _echo *echo.Echo) *App {
 	}
 }
 
-func newRouter(helloHandler *delivery.HelloHandler) *echo.Echo {
+func newRouter(contactHandler *delivery.ContactHandler) *echo.Echo {
 	e := echo.New()
-	e.GET("/", helloHandler.HelloWorld)
+	e.POST("/contact", contactHandler.GetContact)
 	return e
 }
 
@@ -50,7 +50,7 @@ func main() {
 
 func newDatabase(cfg *config.StartupConfig) (*models.Database, error) {
 	dbCfg := cfg.Database
-	conn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", dbCfg.User, dbCfg.Pass, dbCfg.Host, dbCfg.Port, dbCfg.Name)
+	conn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", dbCfg.User, dbCfg.Pass, dbCfg.Host, dbCfg.Port, dbCfg.Name)
 	dbConn, err := sqlx.Open("mysql", conn)
 	if err != nil {
 		log.Fatalln("error connecting to database", err.Error())

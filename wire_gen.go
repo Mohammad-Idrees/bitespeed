@@ -12,6 +12,10 @@ import (
 	"bitespeed/repository"
 )
 
+import (
+	_ "github.com/go-sql-driver/mysql"
+)
+
 // Injectors from wire.go:
 
 func InitializeDependency(cfg *config.StartupConfig) (*App, error) {
@@ -19,9 +23,9 @@ func InitializeDependency(cfg *config.StartupConfig) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	helloRepo := repository.NewHelloRepo(database)
-	helloHandler := delivery.NewHelloHandler(helloRepo)
-	echo := newRouter(helloHandler)
+	contactRepo := repository.NewContactRepo(database)
+	contactHandler := delivery.NewContactHandler(contactRepo)
+	echo := newRouter(contactHandler)
 	app := newApp(cfg, echo)
 	return app, nil
 }

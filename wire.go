@@ -14,8 +14,8 @@ import (
 func InitializeDependency(cfg *config.StartupConfig) (*App, error) {
 	wire.Build(
 		newDatabase,
-		repository.NewHelloRepo,
-		delivery.NewHelloHandler,
+		repository.NewContactRepo,
+		delivery.NewContactHandler,
 		newRouter,
 		newApp,
 	)
