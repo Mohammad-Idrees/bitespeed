@@ -3,6 +3,7 @@ package repository
 import (
 	"bitespeed/models"
 	"context"
+	"fmt"
 	"time"
 )
 
@@ -11,38 +12,85 @@ type ContactRepo struct {
 }
 
 const (
-	GetContact    = "SELECT * FROM Contacts WHERE email = ? OR phoneNumber = ? ORDER BY id ASC"
-	InsertContact = "INSERT INTO Contacts(phoneNumber, email, linkedId, linkPrecedence) VALUES(?, ?, ?, ?)"
+	GetContactsByEmailOrPhone     = "SELECT * FROM Contacts WHERE email = ? OR phoneNumber = ? ORDER BY id ASC"
+	InsertContact                 = "INSERT INTO Contacts(phoneNumber, email, linkedId, linkPrecedence) VALUES(?, ?, ?, ?)"
+	GetContactById                = "SELECT * FROM Contacts WHERE id = ?"
+	GetContactsByPrimaryContactId = "SELECT * FROM Contacts WHERE id = ? or linkedId = ? ORDER by id ASC"
 )
 
-func (r *ContactRepo) GetContact(ctx context.Context, params *models.GetContactParams) (*[]models.Contact, error) {
+func (r *ContactRepo) GetContactsByEmailOrPhone(ctx context.Context, params *models.GetContactParams) (*[]models.Contact, error) {
 	ctx, cancelfunc := context.WithTimeout(ctx, 5*time.Second)
 	defer cancelfunc()
 
 	contacts := &[]models.Contact{}
-	err := r.db.DB.SelectContext(ctx, contacts, GetContact, params.Email, params.PhoneNumber)
+	err := r.db.DB.SelectContext(ctx, contacts, GetContactsByEmailOrPhone, params.Email, params.PhoneNumber)
 	if err != nil {
-		return contacts, err
+		return nil, err
 	}
 	return contacts, nil
+}
+
+func (r *ContactRepo) GetContactsByPrimaryContactId(ctx context.Context, primaryContactId int) (*[]models.Contact, error) {
+	ctx, cancelfunc := context.WithTimeout(ctx, 5*time.Second)
+	defer cancelfunc()
+
+	contacts := &[]models.Contact{}
+	err := r.db.DB.SelectContext(ctx, contacts, GetContactsByPrimaryContactId, primaryContactId, primaryContactId)
+	if err != nil {
+		return nil, err
+	}
+	return contacts, nil
+}
+
+func (r *ContactRepo) GetContactById(ctx context.Context, id int) (*models.Contact, error) {
+	ctx, cancelfunc := context.WithTimeout(ctx, 5*time.Second)
+	defer cancelfunc()
+
+	res := []models.Contact{}
+	err := r.db.DB.SelectContext(ctx, &res, GetContactById, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(res) == 0 {
+		return nil, fmt.Errorf("contact not found")
+	}
+	return &res[0], nil
 }
 
 func (r *ContactRepo) InsertContact(ctx context.Context, params *models.InsertContactParams) (int, error) {
 	ctx, cancelfunc := context.WithTimeout(ctx, 5*time.Second)
 	defer cancelfunc()
 
-	stmt, err := r.db.DB.PrepareContext(ctx, InsertContact)
+	// begin transaction
+	tx, err := r.db.DB.BeginTxx(ctx, nil)
 	if err != nil {
-		return 0, err
+		return -1, err
 	}
-	defer stmt.Close()
+	defer tx.Rollback()
 
+	// prepare query
+	stmt, err := tx.PrepareContext(ctx, InsertContact)
+	if err != nil {
+		return -1, err
+	}
+
+	// execute query
 	result, err := stmt.ExecContext(ctx, params.PhoneNumber, params.Email, params.LinkedId, params.LinkPrecedence)
 	if err != nil {
-		return 0, err
+		return -1, err
+	}
+	id, err := result.LastInsertId()
+	if err != nil {
+		return -1, err
 	}
 
-	id, _ := result.LastInsertId()
+	// commit transaction
+	err = tx.Commit()
+	if err != nil {
+		return -1, err
+	}
+
 	return int(id), nil
 }
 

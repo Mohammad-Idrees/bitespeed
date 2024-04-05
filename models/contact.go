@@ -13,7 +13,7 @@ type Contact struct {
 	DeletedAt      *time.Time `db:"deletedAt"`
 }
 
-type GetContactReq struct {
+type IdentifyContactReq struct {
 	Email       *string `json:"email"`
 	PhoneNumber *string `json:"phoneNumber"`
 }
@@ -28,4 +28,15 @@ type InsertContactParams struct {
 	PhoneNumber    *string
 	LinkedId       *int
 	LinkPrecedence string
+}
+
+type IdentifyContactResp struct {
+	Contact IdentifyContact `json:"contact"`
+}
+
+type IdentifyContact struct {
+	PrimaryContactId    int      `json:"primaryContactId"`
+	Emails              []string `json:"emails"`
+	PhoneNumbers        []string `json:"phoneNumbers"`
+	SecondaryContactIds []int    `json:"secondaryContactIds"`
 }

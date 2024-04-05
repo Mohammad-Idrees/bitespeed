@@ -26,7 +26,7 @@ func newApp(cfg *config.StartupConfig, _echo *echo.Echo) *App {
 
 func newRouter(contactHandler *delivery.ContactHandler) *echo.Echo {
 	e := echo.New()
-	e.POST("/contact", contactHandler.GetContact)
+	e.POST("/identify", contactHandler.IdentifyContact)
 	return e
 }
 
