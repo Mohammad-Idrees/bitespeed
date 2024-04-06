@@ -30,13 +30,23 @@ func (h *ContactHandler) IdentifyContact(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
-	// get primaryContactId from db with matching email/phone
-	primaryContactId, err := h.getPrimartContactIdWithMatchingEmailOrPhone(ctx, req)
+	// get all contacts with matching email/phone
+	getContactParams := &models.GetContactParams{
+		Email:       req.Email,
+		PhoneNumber: req.PhoneNumber,
+	}
+	matchingContacts, err := h.repo.GetContactsByEmailOrPhone(ctx, getContactParams)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, err.Error())
 	}
 
-	// no contacts found, insert primary contact and return
+	// get primaryContactId from matching email/phone
+	primaryContactId, err := h.getPrimartContactIdFromMatchingContacts(matchingContacts)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, err.Error())
+	}
+
+	// no primary contacts found, insert primary contact and return
 	if primaryContactId == 0 {
 		contact, err := h.insertPrimaryContact(ctx, req)
 		if err != nil {
@@ -44,6 +54,15 @@ func (h *ContactHandler) IdentifyContact(c echo.Context) error {
 		}
 		res := buildIdentifyContactResp(&[]models.Contact{*contact})
 		return c.JSON(http.StatusOK, res)
+	}
+
+	// get contacts which are primary and should be turned to secondary
+	contactIdsToTurnToSecondaryContact := getPrimaryContactsToTurnToSecondary(matchingContacts, primaryContactId)
+
+	// update secondary contacts
+	err = h.repo.UpdateLinkedIdAndLinkPrecedenceById(ctx, contactIdsToTurnToSecondaryContact, primaryContactId)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, err.Error())
 	}
 
 	// get contacts
@@ -78,26 +97,28 @@ func (h *ContactHandler) IdentifyContact(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
-func (h *ContactHandler) getPrimartContactIdWithMatchingEmailOrPhone(ctx context.Context, req *models.IdentifyContactReq) (int, error) {
-	getContactParams := &models.GetContactParams{
-		Email:       req.Email,
-		PhoneNumber: req.PhoneNumber,
-	}
-	contacts, err := h.repo.GetContactsByEmailOrPhone(ctx, getContactParams)
-	if err != nil {
-		return -1, err
-	}
-
+func (h *ContactHandler) getPrimartContactIdFromMatchingContacts(matchingContacts *[]models.Contact) (int, error) {
 	// no matching contacts found
-	if len(*contacts) == 0 {
+	if len(*matchingContacts) == 0 {
 		return 0, nil
 	}
 
-	// the matching contact is secondary? return linkedId
-	if (*contacts)[0].LinkedId == nil {
-		return (*contacts)[0].Id, nil
+	// the top matching contact is secondary? return linkedId
+	if (*matchingContacts)[0].LinkedId == nil {
+		return (*matchingContacts)[0].Id, nil
 	}
-	return *(*contacts)[0].LinkedId, nil
+	return *(*matchingContacts)[0].LinkedId, nil
+}
+
+func getPrimaryContactsToTurnToSecondary(matchingContacts *[]models.Contact, primaryContactId int) *[]int {
+	contactIdsToTurnToSecondary := make([]int, 0, len(*matchingContacts))
+	for _, contact := range *matchingContacts {
+		if contact.LinkedId == nil && contact.Id != primaryContactId {
+			contactIdsToTurnToSecondary = append(contactIdsToTurnToSecondary, contact.Id)
+		}
+	}
+
+	return &contactIdsToTurnToSecondary
 }
 
 func (h *ContactHandler) insertPrimaryContact(ctx context.Context, req *models.IdentifyContactReq) (*models.Contact, error) {
