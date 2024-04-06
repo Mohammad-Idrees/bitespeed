@@ -8,6 +8,7 @@ import (
 )
 
 type StartupConfig struct {
+	Profile  string       `mapstructure:"profile"`
 	Server   ServerConfig `mapstructure:"server"`
 	Database DBConfig     `mapstructure:"database"`
 }
@@ -23,6 +24,7 @@ type DBConfig struct {
 	Host string `mapstructure:"host"`
 	Port string `mapstructure:"port"`
 	Name string `mapstructure:"name"`
+	URL  string
 }
 
 func LoadConfig() (*StartupConfig, error) {
@@ -42,13 +44,8 @@ func LoadConfig() (*StartupConfig, error) {
 		return nil, err
 	}
 
-	// config.Server.Name = os.Getenv("SERVER_NAME")
-
-	config.Database.Name = os.Getenv("DB")
-	config.Database.Host = os.Getenv("HOST")
-	config.Database.Port = os.Getenv("PORT")
-	config.Database.User = os.Getenv("USER")
-	config.Database.Pass = os.Getenv("PASSWORD")
+	config.Profile = os.Getenv("profile")
+	config.Database.URL = os.Getenv("dbURL")
 
 	return &config, nil
 }

@@ -12,6 +12,8 @@ import (
 	_ "github.com/lib/pq"
 )
 
+const PROD = "prod"
+
 type App struct {
 	cfg  *config.StartupConfig
 	echo *echo.Echo
@@ -51,6 +53,9 @@ func main() {
 func newDatabase(cfg *config.StartupConfig) (*models.Database, error) {
 	dbCfg := cfg.Database
 	url := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", dbCfg.User, dbCfg.Pass, dbCfg.Host, dbCfg.Port, dbCfg.Name)
+	if cfg.Profile == PROD {
+		url = dbCfg.URL
+	}
 	fmt.Println(url)
 	dbConn, err := sqlx.Open("postgres", url)
 	if err != nil {

@@ -1,3 +1,4 @@
+profile: dev
 server:
   name: localhost
   address: :9009
