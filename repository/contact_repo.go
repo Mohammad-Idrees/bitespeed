@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/jmoiron/sqlx"
 )
 
 type ContactRepo struct {
@@ -13,7 +15,7 @@ type ContactRepo struct {
 
 const (
 	GetContactsByEmailOrPhone                  = "SELECT * FROM Contacts WHERE email = ? OR phoneNumber = ? ORDER BY id ASC"
-	InsertContact                              = "INSERT INTO Contacts(phoneNumber, email, linkedId, linkPrecedence) VALUES(?, ?, ?, ?)"
+	InsertContact                              = "INSERT INTO Contacts(phoneNumber, email, linkedId, linkPrecedence) VALUES(?, ?, ?, ?) RETURNING *"
 	GetContactById                             = "SELECT * FROM Contacts WHERE id = ?"
 	GetContactsByPrimaryContactId              = "SELECT * FROM Contacts WHERE id = ? or linkedId = ? ORDER by id ASC"
 	UpdateContactLinkedIdAndLinkPrecedenceById = "UPDATE Contacts SET linkedId = ?, linkPrecedence = ? where id = ?"
@@ -32,7 +34,8 @@ func (r *ContactRepo) UpdateLinkedIdAndLinkPrecedenceById(ctx context.Context, i
 	defer tx.Rollback()
 
 	// prepare query
-	stmt, err := tx.PrepareContext(ctx, UpdateContactLinkedIdAndLinkPrecedenceById)
+	query := sqlx.Rebind(sqlx.DOLLAR, UpdateContactLinkedIdAndLinkPrecedenceById)
+	stmt, err := tx.PrepareContext(ctx, query)
 	if err != nil {
 		return err
 	}
@@ -60,7 +63,8 @@ func (r *ContactRepo) GetContactsByEmailOrPhone(ctx context.Context, params *mod
 	defer cancelfunc()
 
 	contacts := &[]models.Contact{}
-	err := r.db.DB.SelectContext(ctx, contacts, GetContactsByEmailOrPhone, params.Email, params.PhoneNumber)
+	query := sqlx.Rebind(sqlx.DOLLAR, GetContactsByEmailOrPhone)
+	err := r.db.DB.SelectContext(ctx, contacts, query, params.Email, params.PhoneNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +76,8 @@ func (r *ContactRepo) GetContactsByPrimaryContactId(ctx context.Context, primary
 	defer cancelfunc()
 
 	contacts := &[]models.Contact{}
-	err := r.db.DB.SelectContext(ctx, contacts, GetContactsByPrimaryContactId, primaryContactId, primaryContactId)
+	query := sqlx.Rebind(sqlx.DOLLAR, GetContactsByPrimaryContactId)
+	err := r.db.DB.SelectContext(ctx, contacts, query, primaryContactId, primaryContactId)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +89,8 @@ func (r *ContactRepo) GetContactById(ctx context.Context, id int) (*models.Conta
 	defer cancelfunc()
 
 	res := []models.Contact{}
-	err := r.db.DB.SelectContext(ctx, &res, GetContactById, id)
+	query := sqlx.Rebind(sqlx.DOLLAR, GetContactById)
+	err := r.db.DB.SelectContext(ctx, &res, query, id)
 	if err != nil {
 		return nil, err
 	}
@@ -95,41 +101,18 @@ func (r *ContactRepo) GetContactById(ctx context.Context, id int) (*models.Conta
 	return &res[0], nil
 }
 
-func (r *ContactRepo) InsertContact(ctx context.Context, params *models.InsertContactParams) (int, error) {
+func (r *ContactRepo) InsertContact(ctx context.Context, params *models.InsertContactParams) (*models.Contact, error) {
 	ctx, cancelfunc := context.WithTimeout(ctx, 5*time.Second)
 	defer cancelfunc()
 
-	// begin transaction
-	tx, err := r.db.DB.BeginTxx(ctx, nil)
+	query := sqlx.Rebind(sqlx.DOLLAR, InsertContact)
+	row := r.db.DB.QueryRowxContext(ctx, query, params.PhoneNumber, params.Email, params.LinkedId, params.LinkPrecedence)
+	contact := &models.Contact{}
+	err := row.StructScan(contact)
 	if err != nil {
-		return -1, err
+		return nil, err
 	}
-	defer tx.Rollback()
-
-	// prepare query
-	stmt, err := tx.PrepareContext(ctx, InsertContact)
-	if err != nil {
-		return -1, err
-	}
-	defer stmt.Close()
-
-	// execute query
-	result, err := stmt.ExecContext(ctx, params.PhoneNumber, params.Email, params.LinkedId, params.LinkPrecedence)
-	if err != nil {
-		return -1, err
-	}
-	id, err := result.LastInsertId()
-	if err != nil {
-		return -1, err
-	}
-
-	// commit transaction
-	err = tx.Commit()
-	if err != nil {
-		return -1, err
-	}
-
-	return int(id), nil
+	return contact, nil
 }
 
 func NewContactRepo(db *models.Database) *ContactRepo {

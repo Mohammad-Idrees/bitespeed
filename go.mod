@@ -7,6 +7,7 @@ require (
 	github.com/google/wire v0.6.0
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/labstack/echo/v4 v4.11.4
+	github.com/lib/pq v1.2.0
 	github.com/spf13/viper v1.18.2
 )
 

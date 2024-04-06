@@ -128,11 +128,7 @@ func (h *ContactHandler) insertPrimaryContact(ctx context.Context, req *models.I
 		LinkedId:       nil,
 		LinkPrecedence: PRIMARY,
 	}
-	id, err := h.repo.InsertContact(ctx, insertContactParams)
-	if err != nil {
-		return nil, err
-	}
-	contact, err := h.repo.GetContactById(ctx, id)
+	contact, err := h.repo.InsertContact(ctx, insertContactParams)
 	if err != nil {
 		return nil, err
 	}
@@ -146,11 +142,7 @@ func (h *ContactHandler) insertSecondaryContact(ctx context.Context, req *models
 		LinkedId:       &linkedId,
 		LinkPrecedence: SECONDARY,
 	}
-	id, err := h.repo.InsertContact(ctx, insertContactParams)
-	if err != nil {
-		return nil, err
-	}
-	contact, err := h.repo.GetContactById(ctx, id)
+	contact, err := h.repo.InsertContact(ctx, insertContactParams)
 	if err != nil {
 		return nil, err
 	}

@@ -2,6 +2,7 @@ package config
 
 import (
 	"log"
+	"os"
 
 	"github.com/spf13/viper"
 )
@@ -43,11 +44,11 @@ func LoadConfig() (*StartupConfig, error) {
 
 	// config.Server.Name = os.Getenv("SERVER_NAME")
 
-	// config.Database.Name = os.Getenv("DB")
-	// config.Database.Host = os.Getenv("HOST")
-	// config.Database.Port = os.Getenv("PORT")
-	// config.Database.User = os.Getenv("USER")
-	// config.Database.Pass = os.Getenv("PASSWORD")
+	config.Database.Name = os.Getenv("DB")
+	config.Database.Host = os.Getenv("HOST")
+	config.Database.Port = os.Getenv("PORT")
+	config.Database.User = os.Getenv("USER")
+	config.Database.Pass = os.Getenv("PASSWORD")
 
 	return &config, nil
 }

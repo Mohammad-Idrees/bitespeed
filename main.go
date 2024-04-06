@@ -7,20 +7,20 @@ import (
 	"fmt"
 	"log"
 
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
+	_ "github.com/lib/pq"
 )
 
 type App struct {
-	cfg   *config.StartupConfig
-	_echo *echo.Echo
+	cfg  *config.StartupConfig
+	echo *echo.Echo
 }
 
-func newApp(cfg *config.StartupConfig, _echo *echo.Echo) *App {
+func newApp(cfg *config.StartupConfig, echo *echo.Echo) *App {
 	return &App{
-		cfg:   cfg,
-		_echo: _echo,
+		cfg:  cfg,
+		echo: echo,
 	}
 }
 
@@ -44,14 +44,15 @@ func main() {
 	}
 
 	// start server
-	app._echo.Start(app.cfg.Server.Address)
+	app.echo.Start(app.cfg.Server.Address)
 
 }
 
 func newDatabase(cfg *config.StartupConfig) (*models.Database, error) {
 	dbCfg := cfg.Database
-	conn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", dbCfg.User, dbCfg.Pass, dbCfg.Host, dbCfg.Port, dbCfg.Name)
-	dbConn, err := sqlx.Open("mysql", conn)
+	url := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", dbCfg.User, dbCfg.Pass, dbCfg.Host, dbCfg.Port, dbCfg.Name)
+	fmt.Println(url)
+	dbConn, err := sqlx.Open("postgres", url)
 	if err != nil {
 		log.Fatalln("error connecting to database", err.Error())
 		return nil, err

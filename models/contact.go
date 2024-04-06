@@ -4,13 +4,13 @@ import "time"
 
 type Contact struct {
 	Id             int        `db:"id"`
-	PhoneNumber    *string    `db:"phoneNumber"`
+	PhoneNumber    *string    `db:"phonenumber"`
 	Email          *string    `db:"email"`
-	LinkedId       *int       `db:"linkedId"`
-	LinkPrecedence string     `db:"linkPrecedence"`
-	CreatedAt      *time.Time `db:"createdAt"`
-	UpdatedAt      *time.Time `db:"updatedAt"`
-	DeletedAt      *time.Time `db:"deletedAt"`
+	LinkedId       *int       `db:"linkedid"`
+	LinkPrecedence string     `db:"linkprecedence"`
+	CreatedAt      *time.Time `db:"createdat"`
+	UpdatedAt      *time.Time `db:"updatedat"`
+	DeletedAt      *time.Time `db:"deletedat"`
 }
 
 type IdentifyContactReq struct {
